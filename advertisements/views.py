@@ -25,14 +25,14 @@ class AdvertisementViewSet(viewsets.ModelViewSet):
         serializer.save(creator=self.request.user)
 
     def update(self, request, *args, **kwargs):
-        # Проверка что пользователь автор объявления
+        # Проверка что, пользователь автор объявления
         advertisement = self.get_object()
         if advertisement.creator != request.user:
             raise PermissionDenied('You do not have permission to modify this advertisement.')
         return super().update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
-        # Проверка что пользователь автор объявления
+        # Проверка что, пользователь автор объявления
         advertisement = self.get_object()
         if advertisement.creator != request.user:
             raise PermissionDenied('You do not have permission to delete this advertisement.')
@@ -41,5 +41,16 @@ class AdvertisementViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """Получение прав для действий."""
         if self.action in ["create", "update", "partial_update", "destroy"]:
-            return [IsAuthenticated()]
+            self.permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+        else:
+            self.permission_classes = [IsOwnerOrReadOnly]
         return [permission() for permission in self.permission_classes]
+
+    def get_queryset(self):
+        """Фильтрация объявлений по дате создания."""
+        queryset = Advertisement.objects.all()
+        date = self.request.query_params.get('date')
+        if date is not None:
+            queryset = queryset.filter(created_at__date=date)
+        return queryset
+
